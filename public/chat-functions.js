@@ -10,6 +10,12 @@ let lastMessageId = null;
 
 // 加载会话列表
 async function loadConversations() {
+    // 检查用户是否已登录
+    if (!token) {
+        console.warn('未登录用户尝试加载会话列表');
+        return;
+    }
+
     try {
         const response = await fetch(`${API_BASE}/chat/conversations`, {
             headers: {

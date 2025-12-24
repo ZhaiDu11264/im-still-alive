@@ -6,22 +6,119 @@ let unreadMessageChecker = null; // 未读消息检查器
 // API 基础URL
 const API_BASE = '/api';
 
+// 检查登录状态
+function checkAuthStatus() {
+    if (!token) {
+        console.warn('用户未登录，重定向到登录页面');
+        showAuthPage();
+        return false;
+    }
+    return true;
+}
+
+// 验证token有效性
+async function validateToken() {
+    if (!token) {
+        return false;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/auth/validate`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            // Token无效，清除并重定向到登录页面
+            localStorage.removeItem('token');
+            token = null;
+            currentUser = null;
+            showAuthPage();
+            return false;
+        }
+
+        return true;
+    } catch (error) {
+        console.error('验证token失败:', error);
+        return false;
+    }
+}
+
 // 页面初始化
-document.addEventListener('DOMContentLoaded', function () {
-    initializeApp();
+document.addEventListener('DOMContentLoaded', async function () {
+    await initializeApp();
     setupEventListeners();
+    
+    // 添加DOM保护
+    setupDOMProtection();
+});
+
+// 设置DOM保护
+function setupDOMProtection() {
+    // 监听DOM变化，防止未授权访问
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (!token && mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                const target = mutation.target;
+                if (target.id === 'main-app' && target.classList.contains('active')) {
+                    console.warn('检测到未授权的DOM操作，阻止访问主应用');
+                    target.classList.remove('active');
+                    showAuthPage();
+                    showMessage('请先登录后再访问', 'warning');
+                }
+            }
+        });
+    });
+    
+    // 开始监听
+    observer.observe(document.body, {
+        attributes: true,
+        subtree: true,
+        attributeFilter: ['class']
+    });
+}
+
+// 页面可见性变化时检查登录状态
+document.addEventListener('visibilitychange', async function() {
+    if (!document.hidden && token) {
+        // 页面重新可见时验证token
+        const isValid = await validateToken();
+        if (!isValid) {
+            showMessage('登录已过期，请重新登录', 'warning');
+        }
+    }
+});
+
+// 监听存储变化（多标签页同步）
+window.addEventListener('storage', function(e) {
+    if (e.key === 'token') {
+        if (!e.newValue) {
+            // token被清除，可能是其他标签页退出登录
+            token = null;
+            currentUser = null;
+            showAuthPage();
+            showMessage('您已在其他标签页退出登录', 'info');
+        }
+    }
 });
 
 // 初始化应用
-function initializeApp() {
+async function initializeApp() {
     if (token) {
-        showMainApp();
-        loadUserData();
-        // 启动定期检查未读消息
-        startUnreadMessageChecker();
-        // 初始化时更新未读徽章
-        if (typeof updateTotalUnreadBadge === 'function') {
-            updateTotalUnreadBadge();
+        // 验证token有效性
+        const isValidToken = await validateToken();
+        if (isValidToken) {
+            showMainApp();
+            loadUserData();
+            // 启动定期检查未读消息
+            startUnreadMessageChecker();
+            // 初始化时更新未读徽章
+            if (typeof updateTotalUnreadBadge === 'function') {
+                updateTotalUnreadBadge();
+            }
+        } else {
+            showAuthPage();
         }
     } else {
         showAuthPage();
@@ -42,8 +139,14 @@ function startUnreadMessageChecker() {
     }
 
     // 每15秒检查一次未读消息（更频繁的检查）
-    unreadMessageChecker = setInterval(() => {
+    unreadMessageChecker = setInterval(async () => {
         if (token && typeof updateTotalUnreadBadge === 'function') {
+            // 同时验证token是否仍然有效
+            const isValid = await validateToken();
+            if (!isValid) {
+                return; // validateToken函数会处理无效token的情况
+            }
+            
             updateTotalUnreadBadge();
             // 如果当前在消息页面，也更新会话列表
             const messagesPage = document.getElementById('messages-page');
@@ -112,12 +215,14 @@ function setupEventListeners() {
 
 // 显示登录页面
 function showAuthPage() {
+    document.body.removeAttribute('data-authenticated');
     document.getElementById('auth-page').classList.add('active');
     document.getElementById('main-app').classList.remove('active');
 }
 
 // 显示主应用
 function showMainApp() {
+    document.body.setAttribute('data-authenticated', 'true');
     document.getElementById('auth-page').classList.remove('active');
     document.getElementById('main-app').classList.add('active');
 }
@@ -309,6 +414,13 @@ async function loadUserData() {
 
 // 加载打卡状态
 async function loadCheckinStatus() {
+    // 检查用户是否已登录
+    if (!token) {
+        console.warn('未登录用户尝试加载打卡状态');
+        showAuthPage();
+        return;
+    }
+
     try {
         const response = await fetch(`${API_BASE}/checkin/status`, {
             headers: {
@@ -506,6 +618,9 @@ async function selectMood(mood) {
         if (response.ok) {
             console.log('打卡响应数据:', data); // 调试信息
             
+            // 获取当前显示的存活天数
+            const currentDays = parseInt(document.getElementById('survive-days').textContent) || 0;
+            
             // 显示打卡成功动画
             showCheckinSuccessAnimation(mood, data.surviveDays);
             
@@ -528,7 +643,8 @@ async function selectMood(mood) {
                 
                 // 更新UI，显示新解锁的成就
                 setTimeout(() => {
-                    document.getElementById('survive-days').textContent = data.surviveDays;
+                    // 使用动画更新存活天数
+                    animateCounterUpdate(currentDays, data.surviveDays);
                     displayAchievementProgress(data.surviveDays, data.newAchievement);
                     
                     // 更新打卡按钮状态
@@ -546,9 +662,15 @@ async function selectMood(mood) {
                     todayMood.classList.remove('hidden');
                 }, 1500);
             } else {
-                // 没有新成就，延迟刷新状态
-                setTimeout(async () => {
-                    await loadCheckinStatus();
+                // 没有新成就，延迟更新状态
+                setTimeout(() => {
+                    // 使用动画更新存活天数
+                    animateCounterUpdate(currentDays, data.surviveDays);
+                    
+                    // 更新其他UI状态
+                    setTimeout(async () => {
+                        await loadCheckinStatus();
+                    }, 800); // 等待数字动画完成
                 }, 1500);
             }
         } else {
@@ -561,6 +683,14 @@ async function selectMood(mood) {
 
 // 显示页面
 function showPage(pageName) {
+    // 检查用户是否已登录
+    if (!token) {
+        console.warn('未登录用户尝试访问页面:', pageName);
+        showMessage('请先登录', 'warning');
+        showAuthPage();
+        return;
+    }
+
     // 更新导航按钮状态
     document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelector(`[onclick="showPage('${pageName}')"]`).classList.add('active');
@@ -602,6 +732,13 @@ function showPage(pageName) {
 
 // 显示排行榜
 async function showRanking(type) {
+    // 检查用户是否已登录
+    if (!token) {
+        console.warn('未登录用户尝试访问排行榜:', type);
+        showAuthPage();
+        return;
+    }
+
     // 更新标签状态
     document.querySelectorAll('.ranking-tab').forEach(tab => tab.classList.remove('active'));
     document.querySelector(`[onclick="showRanking('${type}')"]`).classList.add('active');
@@ -776,6 +913,13 @@ async function updateUnreadBadge() {
 
 // 加载消息
 async function loadMessages() {
+    // 检查用户是否已登录
+    if (!token) {
+        console.warn('未登录用户尝试加载消息');
+        showAuthPage();
+        return;
+    }
+
     try {
         const response = await fetch(`${API_BASE}/messages`, {
             headers: {
@@ -1069,6 +1213,13 @@ async function handleFriendRequest(action, requesterId, messageId) {
 
 // 加载用户资料
 async function loadProfile() {
+    // 检查用户是否已登录
+    if (!token) {
+        console.warn('未登录用户尝试加载用户资料');
+        showAuthPage();
+        return null;
+    }
+
     try {
         const response = await fetch(`${API_BASE}/profile/me`, {
             headers: {
@@ -1454,11 +1605,22 @@ function logout() {
         unreadMessageChecker = null;
     }
     
+    // 清除认证信息
     localStorage.removeItem('token');
     token = null;
     currentUser = null;
-    // 刷新页面，自动跳转到登录界面
-    window.location.reload();
+    
+    // 移除认证标记
+    document.body.removeAttribute('data-authenticated');
+    
+    // 关闭模态框
+    closeModal();
+    
+    // 显示登录页面
+    showAuthPage();
+    
+    // 显示退出成功消息
+    showMessage('已安全退出登录', 'info');
 }
 
 // 显示注销账号确认对话框
@@ -2285,6 +2447,55 @@ function initTimelineDrag() {
 }
 // ==================== 打卡成功动画效果 ====================
 
+// 数字跳变动画
+function animateCounterUpdate(fromValue, toValue) {
+    const counterElement = document.getElementById('survive-days');
+    const duration = 800; // 动画持续时间
+    const startTime = performance.now();
+    
+    // 添加跳变动画类
+    counterElement.classList.add('counter-updating');
+    
+    function updateCounter(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // 使用缓动函数让动画更自然
+        const easeOutBounce = (t) => {
+            if (t < 1 / 2.75) {
+                return 7.5625 * t * t;
+            } else if (t < 2 / 2.75) {
+                return 7.5625 * (t -= 1.5 / 2.75) * t + 0.75;
+            } else if (t < 2.5 / 2.75) {
+                return 7.5625 * (t -= 2.25 / 2.75) * t + 0.9375;
+            } else {
+                return 7.5625 * (t -= 2.625 / 2.75) * t + 0.984375;
+            }
+        };
+        
+        const easedProgress = easeOutBounce(progress);
+        const currentValue = Math.round(fromValue + (toValue - fromValue) * easedProgress);
+        
+        counterElement.textContent = currentValue;
+        
+        if (progress < 1) {
+            requestAnimationFrame(updateCounter);
+        } else {
+            // 动画完成
+            counterElement.textContent = toValue;
+            counterElement.classList.remove('counter-updating');
+            
+            // 添加完成时的特效
+            counterElement.classList.add('counter-complete');
+            setTimeout(() => {
+                counterElement.classList.remove('counter-complete');
+            }, 600);
+        }
+    }
+    
+    requestAnimationFrame(updateCounter);
+}
+
 // 显示打卡成功动画
 function showCheckinSuccessAnimation(mood, surviveDays) {
     // 创建动画容器
@@ -2296,10 +2507,19 @@ function showCheckinSuccessAnimation(mood, surviveDays) {
                 <div class="checkin-mood-large">${mood}</div>
                 <div class="checkin-success-ring"></div>
                 <div class="checkin-success-ring-2"></div>
+                <div class="checkin-success-sparkles">
+                    <div class="sparkle sparkle-1">✨</div>
+                    <div class="sparkle sparkle-2">⭐</div>
+                    <div class="sparkle sparkle-3">💫</div>
+                    <div class="sparkle sparkle-4">✨</div>
+                </div>
             </div>
             <div class="checkin-success-text">
                 <h2 class="checkin-success-title">打卡成功！</h2>
-                <p class="checkin-success-subtitle">已连续存活 ${surviveDays} 天</p>
+                <p class="checkin-success-subtitle">已连续存活 <span class="highlight-days">${surviveDays}</span> 天</p>
+                <div class="success-progress-bar">
+                    <div class="progress-fill"></div>
+                </div>
             </div>
             <div class="checkin-confetti-container">
                 ${generateConfetti()}
@@ -2317,6 +2537,14 @@ function showCheckinSuccessAnimation(mood, surviveDays) {
         setTimeout(() => {
             addVibrationEffect();
         }, 200);
+        
+        // 触发进度条动画
+        setTimeout(() => {
+            const progressFill = animationContainer.querySelector('.progress-fill');
+            if (progressFill) {
+                progressFill.style.width = '100%';
+            }
+        }, 800);
     }, 50);
     
     // 添加粒子动画
@@ -2326,7 +2554,9 @@ function showCheckinSuccessAnimation(mood, surviveDays) {
     setTimeout(() => {
         animationContainer.classList.add('fade-out');
         setTimeout(() => {
-            document.body.removeChild(animationContainer);
+            if (document.body.contains(animationContainer)) {
+                document.body.removeChild(animationContainer);
+            }
         }, 500);
     }, 2500);
 }

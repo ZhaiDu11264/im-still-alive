@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { getConnection } = require('../config/database');
+const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -126,6 +127,23 @@ router.post('/login', async (req, res) => {
         });
     } catch (error) {
         console.error('登录错误:', error);
+        res.status(500).json({ error: '服务器错误' });
+    }
+});
+
+// 验证token有效性
+router.get('/validate', authenticateToken, async (req, res) => {
+    try {
+        // 如果中间件通过，说明token有效
+        res.json({ 
+            valid: true, 
+            user: {
+                id: req.user.userId,
+                username: req.user.username
+            }
+        });
+    } catch (error) {
+        console.error('验证token错误:', error);
         res.status(500).json({ error: '服务器错误' });
     }
 });

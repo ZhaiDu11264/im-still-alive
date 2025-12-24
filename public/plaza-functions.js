@@ -111,6 +111,13 @@ function filterPosts(filter) {
 
 // 加载帖子列表
 async function loadPosts() {
+    // 检查用户是否已登录
+    if (!token) {
+        console.warn('未登录用户尝试加载帖子列表');
+        displayEmptyState();
+        return;
+    }
+
     try {
         const response = await fetch(`${API_BASE}/plaza/posts?filter=${currentFilter}`, {
             headers: {
