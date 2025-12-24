@@ -278,9 +278,8 @@ server {
 
 ## 📞 联系方式
 
-- 项目主页: https://github.com/your-username/im-still-alive
-- 问题反馈: https://github.com/your-username/im-still-alive/issues
-- 邮箱: your-email@example.com
+- 项目主页: https://github.com/ZhaiDu11264/im-still-alive
+- 问题反馈: https://github.com/ZhaiDu11264/im-still-alive/issues
 
 ---
 
