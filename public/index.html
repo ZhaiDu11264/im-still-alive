@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我还活着 - 打卡小程序</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="chat-styles.css">
+    <link rel="stylesheet" href="ranking-chat-styles.css">
+    <link rel="stylesheet" href="plaza-styles.css">
+</head>
+
+<body data-theme="light">
+    <div id="app">
+        <!-- 登录注册页面 -->
+        <div id="auth-page" class="page active">
+            <div class="auth-container">
+                <h1>我还活着</h1>
+                <div class="auth-tabs">
+                    <button class="tab-btn active" onclick="showLogin()">登录</button>
+                    <button class="tab-btn" onclick="showRegister()">注册</button>
+                </div>
+
+                <!-- 登录表单 -->
+                <form id="login-form" class="auth-form">
+                    <div class="preview-avatar" id="login-preview-avatar">👤</div>
+                    <input type="text" id="login-username" placeholder="用户名" required>
+                    <input type="password" id="login-password" placeholder="密码" required>
+                    <button type="submit">登录</button>
+                </form>
+
+                <!-- 注册表单 -->
+                <form id="register-form" class="auth-form hidden">
+                    <div class="preview-avatar" id="register-preview-avatar">👤</div>
+                    <input type="text" id="register-username" placeholder="用户名" required>
+                    <input type="password" id="register-password" placeholder="密码" required>
+                    <input type="date" id="register-birthday" placeholder="生日（可选）">
+                    <select id="register-country" required>
+                        <option value="">选择国家</option>
+                    </select>
+                    <select id="register-state" required disabled>
+                        <option value="">请先选择国家</option>
+                    </select>
+                    <button type="submit">注册</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- 主应用页面 -->
+        <div id="main-app" class="page">
+            <!-- 顶部导航 -->
+            <nav class="top-nav">
+                <h2 id="page-title">我还活着</h2>
+            </nav>
+
+            <!-- 主页面 -->
+            <div id="home-page" class="content-page active">
+                <div class="home-container">
+                    <div class="survive-counter">
+                        <h3>存活天数</h3>
+                        <div class="counter-display" id="survive-days">0</div>
+                    </div>
+
+                    <div class="checkin-section">
+                        <button id="checkin-btn" class="checkin-button">
+                            <span class="checkin-text">今日打卡</span>
+                        </button>
+                        <div class="mood-selector hidden" id="mood-selector">
+                            <p>选择今天的心情：</p>
+                            <div class="mood-options">
+                                <button class="mood-btn" data-mood="😊">😊</button>
+                                <button class="mood-btn" data-mood="😢">😢</button>
+                                <button class="mood-btn" data-mood="😴">😴</button>
+                                <button class="mood-btn" data-mood="😤">😤</button>
+                                <button class="mood-btn" data-mood="🤔">🤔</button>
+                                <button class="mood-btn" data-mood="😎">😎</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="achievement-section" id="achievement-section">
+                        <h4>成就里程碑</h4>
+                        <div style="text-align: center; margin-top: 15px; color: #666;">
+                            加载中...
+                        </div>
+                    </div>
+
+                    <div class="today-mood" id="today-mood">
+                        <!-- 今日心情将在这里显示 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 排行榜页面 -->
+            <div id="ranking-page" class="content-page">
+                <div class="ranking-tabs">
+                    <button class="ranking-tab active" onclick="showRanking('friends')">好友</button>
+                    <button class="ranking-tab" onclick="showRanking('region')">地区</button>
+                    <button class="ranking-tab" onclick="showRanking('national')">全球</button>
+                </div>
+
+
+
+                <div id="ranking-list" class="ranking-list">
+                    <!-- 排行榜内容 -->
+                </div>
+            </div>
+
+            <!-- 消息页面 -->
+            <div id="messages-page" class="content-page">
+                <!-- 会话列表视图 -->
+                <div id="conversations-view" class="chat-view-container active">
+                    <div class="messages-header">
+                        <h3>消息</h3>
+                        <div class="messages-header-actions">
+                            <button id="mark-all-read-btn" class="mark-all-read-btn" onclick="markAllMessagesAsRead()" title="全部标记为已读">✓</button>
+                            <button id="add-friend-btn" class="add-friend-btn">+</button>
+                        </div>
+                    </div>
+
+                    <!-- 系统通知入口 -->
+                    <div id="system-notifications-entry" class="notification-entry" onclick="showNotificationsView()">
+                        <div class="notification-entry-content">
+                            <span class="notification-icon">🔔</span>
+                            <div class="notification-entry-text">
+                                <span class="notification-title">系统通知</span>
+                                <span class="notification-subtitle">好友申请、打卡提醒</span>
+                            </div>
+                        </div>
+                        <span id="system-unread-badge" class="badge hidden">0</span>
+                    </div>
+
+                    <!-- 会话列表 -->
+                    <div id="conversations-list" class="conversations-list">
+                        <!-- 动态加载会话 -->
+                    </div>
+                </div>
+
+                <!-- 聊天窗口视图 -->
+                <div id="chat-view" class="chat-view-container">
+                    <div class="chat-header">
+                        <button class="back-btn" onclick="showConversationsView()">←</button>
+                        <div class="chat-user-info">
+                            <span id="chat-avatar" class="chat-avatar">👤</span>
+                            <span id="chat-username"></span>
+                        </div>
+                    </div>
+
+                    <div id="chat-messages" class="chat-messages">
+                        <!-- 消息列表 -->
+                    </div>
+
+                    <div class="chat-input-container">
+                        <div class="chat-toolbar">
+                            <button class="toolbar-btn emoji-btn" onclick="toggleEmojiPicker()" title="表情">
+                                😊
+                            </button>
+                        </div>
+                        
+                        <div class="chat-input-area">
+                            <input type="text" id="chat-input" placeholder="输入消息..." maxlength="1000">
+                            <button id="send-message-btn">发送</button>
+                        </div>
+                        
+                        <!-- 表情选择器 -->
+                        <div id="emoji-picker" class="emoji-picker hidden">
+                            <div class="emoji-categories">
+                                <button class="emoji-category-btn active" onclick="showEmojiCategory('smileys')" data-category="smileys">😊</button>
+                                <button class="emoji-category-btn" onclick="showEmojiCategory('gestures')" data-category="gestures">👋</button>
+                                <button class="emoji-category-btn" onclick="showEmojiCategory('objects')" data-category="objects">🎉</button>
+                                <button class="emoji-category-btn" onclick="showEmojiCategory('nature')" data-category="nature">🌸</button>
+                                <button class="emoji-category-btn" onclick="showEmojiCategory('food')" data-category="food">🍎</button>
+                            </div>
+                            <div class="emoji-grid" id="emoji-grid">
+                                <!-- 表情网格将在这里动态生成 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 系统通知视图 -->
+                <div id="notifications-view" class="chat-view-container">
+                    <div class="chat-header">
+                        <button class="back-btn" onclick="showConversationsView()">←</button>
+                        <h3>系统通知</h3>
+                        <button id="mark-all-notifications-read-btn" class="mark-all-read-btn" onclick="markAllNotificationsAsRead()" title="全部标记为已读">✓</button>
+                    </div>
+                    <div id="notifications-list" class="messages-list">
+                        <!-- 系统通知列表 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 广场页面 -->
+            <div id="plaza-page" class="content-page">
+                <div class="plaza-container">
+                    <!-- 广场头部 -->
+                    <div class="plaza-header">
+                        <h3>存活广场</h3>
+                        <button id="create-post-btn" class="create-post-btn" onclick="showCreatePostModal()">
+                            <span>✏️</span>
+                            <span>发帖</span>
+                        </button>
+                    </div>
+
+                    <!-- 帖子筛选 -->
+                    <div class="plaza-filters">
+                        <button class="filter-btn active" onclick="filterPosts('all')">全部</button>
+                        <button class="filter-btn" onclick="filterPosts('latest')">最新</button>
+                        <button class="filter-btn" onclick="filterPosts('hot')">热门</button>
+                        <button class="filter-btn" onclick="filterPosts('my')">我的</button>
+                    </div>
+
+                    <!-- 帖子列表 -->
+                    <div id="posts-list" class="posts-list">
+                        <!-- 帖子将在这里动态加载 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 我的页面 -->
+            <div id="profile-page" class="content-page">
+                <div class="profile-header">
+                    <div class="profile-info">
+                        <div class="profile-avatar" id="profile-avatar">👤</div>
+                        <h3 id="profile-username">用户名</h3>
+                    </div>
+                    <button id="settings-btn" class="settings-btn">⚙️</button>
+                </div>
+
+                <!-- 打卡统计栏 -->
+                <div class="stats-section">
+                    <div class="stat-item">
+                        <div class="stat-number" id="consecutive-days">0</div>
+                        <div class="stat-label">连续存活天数</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="total-checkins">0</div>
+                        <div class="stat-label">总打卡次数</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="checkin-rate">0%</div>
+                        <div class="stat-label">本月打卡率</div>
+                    </div>
+                </div>
+
+                <div class="achievements-showcase">
+                    <h4>成就展柜</h4>
+                    <div id="achievements-list">
+                        <!-- 成就时间轴将在这里显示 -->
+                    </div>
+                </div>
+
+                <div class="calendar-section">
+                    <div class="calendar-header">
+                        <button class="calendar-nav-btn" id="prev-month">‹</button>
+                        <h4 id="calendar-title">存活日历</h4>
+                        <button class="calendar-nav-btn" id="next-month">›</button>
+                    </div>
+                    <div id="calendar-container" class="calendar">
+                        <!-- 日历将在这里显示 -->
+                    </div>
+                    <div class="calendar-legend">
+                        <div class="legend-item">
+                            <div class="legend-color checked"></div>
+                            <span>已打卡</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color today"></div>
+                            <span>今天</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color normal"></div>
+                            <span>未打卡</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 浮动批量提醒按钮 -->
+            <div class="floating-remind-btn" id="floating-remind-btn" onclick="batchRemindFriends()">
+                <span class="remind-icon">📢</span>
+                <span class="remind-badge" id="remind-badge">0</span>
+            </div>
+
+            <!-- 底部导航 -->
+            <nav class="bottom-nav">
+                <button class="nav-btn active" onclick="showPage('home')">
+                    <span>🏠</span>
+                    <span>首页</span>
+                </button>
+                <button class="nav-btn" onclick="showPage('ranking')">
+                    <span>🏆</span>
+                    <span>排行榜</span>
+                </button>
+                <button class="nav-btn plaza-btn" onclick="showPage('plaza')">
+                    <span>🧭</span>
+                    <span>广场</span>
+                </button>
+                <button class="nav-btn" onclick="showPage('messages')">
+                    <span class="nav-icon-container">
+                        <span>💬</span>
+                        <span class="unread-badge hidden" id="unread-badge"></span>
+                    </span>
+                    <span>消息</span>
+                </button>
+                <button class="nav-btn" onclick="showPage('profile')">
+                    <span>👤</span>
+                    <span>我的</span>
+                </button>
+            </nav>
+        </div>
+    </div>
+
+    <!-- 模态框 -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+
+    <!-- 帖子详情模态框 -->
+    <div id="post-detail-modal" class="post-detail-modal hidden">
+        <div class="post-detail-content">
+            <div class="post-detail-header">
+                <button class="back-btn" onclick="closePostDetail()">←</button>
+                <h3>帖子详情</h3>
+                <div class="post-actions-menu">
+                    <button class="action-menu-btn" onclick="togglePostActionsMenu()">⋯</button>
+                    <div id="post-actions-dropdown" class="actions-dropdown hidden">
+                        <button onclick="sharePost()" class="action-item">
+                            <span>📤</span>
+                            <span>分享给好友</span>
+                        </button>
+                        <button id="delete-post-btn" onclick="deletePost()" class="action-item delete-action hidden">
+                            <span>🗑️</span>
+                            <span>删除帖子</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="post-detail-body">
+                <!-- 帖子内容 -->
+                <div id="post-detail-content" class="post-content-detail">
+                    <!-- 动态加载帖子内容 -->
+                </div>
+                
+                <!-- 评论区 -->
+                <div class="comments-section">
+                    <div class="comments-header">
+                        <h4>评论 <span id="comments-count">0</span></h4>
+                    </div>
+                    
+                    <!-- 发表评论 -->
+                    <div class="comment-input-area">
+                        <div class="comment-input-container">
+                            <textarea id="comment-input" placeholder="写下你的想法..." maxlength="500"></textarea>
+                            <div class="comment-input-actions">
+                                <span class="char-count"><span id="comment-char-count">0</span>/500</span>
+                                <button id="submit-comment-btn" onclick="submitComment()">发表</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 评论列表 -->
+                    <div id="comments-list" class="comments-list">
+                        <!-- 动态加载评论 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 分享帖子模态框 -->
+    <div id="share-post-modal" class="share-post-modal hidden">
+        <div class="share-modal-content">
+            <div class="share-modal-header">
+                <h3>分享给好友</h3>
+                <button class="close-share-modal" onclick="closeShareModal()">&times;</button>
+            </div>
+            
+            <div class="share-modal-body">
+                <div class="share-post-preview">
+                    <div id="share-post-title" class="share-preview-title"></div>
+                    <div id="share-post-excerpt" class="share-preview-excerpt"></div>
+                </div>
+                
+                <div class="friends-list-container">
+                    <h4>选择好友</h4>
+                    <div id="friends-list-for-share" class="friends-list">
+                        <!-- 动态加载好友列表 -->
+                    </div>
+                </div>
+                
+                <div class="share-message-container">
+                    <label for="share-message">附加消息（可选）</label>
+                    <textarea id="share-message" placeholder="想对好友说些什么..." maxlength="200"></textarea>
+                </div>
+                
+                <div class="share-actions">
+                    <button onclick="closeShareModal()" class="cancel-btn">取消</button>
+                    <button onclick="confirmShare()" class="share-btn">分享</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 发帖模态框 -->
+    <div id="create-post-modal" class="create-post-modal hidden">
+        <div class="create-post-content">
+            <div class="create-post-header">
+                <h3>发布新帖</h3>
+                <button class="close-post-modal" onclick="closeCreatePostModal()">&times;</button>
+            </div>
+            
+            <form id="create-post-form" class="create-post-form">
+                <!-- 封面图片 -->
+                <div class="form-group">
+                    <label>封面图片</label>
+                    <div class="cover-upload-area" onclick="selectCoverImage()">
+                        <div id="cover-preview" class="cover-preview hidden">
+                            <img id="cover-image" src="" alt="封面预览">
+                            <button type="button" class="remove-cover" onclick="removeCoverImage()">&times;</button>
+                        </div>
+                        <div id="cover-placeholder" class="cover-placeholder">
+                            <span class="upload-icon">📷</span>
+                            <span>点击上传封面图片</span>
+                            <span class="upload-hint">支持 JPG、PNG 格式</span>
+                        </div>
+                    </div>
+                    <input type="file" id="cover-file-input" accept="image/*" style="display: none;" onchange="handleCoverImageSelect(event)">
+                </div>
+
+                <!-- 帖子标题 -->
+                <div class="form-group">
+                    <label for="post-title">标题 *</label>
+                    <input type="text" id="post-title" placeholder="请输入帖子标题..." maxlength="100" required>
+                    <div class="char-count">
+                        <span id="title-count">0</span>/100
+                    </div>
+                </div>
+
+                <!-- 帖子内容 -->
+                <div class="form-group">
+                    <label for="post-content">内容 *</label>
+                    <textarea id="post-content" placeholder="分享你的存活故事、心得或感悟..." maxlength="1000" required></textarea>
+                    <div class="char-count">
+                        <span id="content-count">0</span>/1000
+                    </div>
+                </div>
+
+                <!-- 标签 -->
+                <div class="form-group">
+                    <label>标签</label>
+                    <div class="tag-selector">
+                        <button type="button" class="tag-btn" data-tag="日常" onclick="toggleTag(this)">日常</button>
+                        <button type="button" class="tag-btn" data-tag="心得" onclick="toggleTag(this)">心得</button>
+                        <button type="button" class="tag-btn" data-tag="励志" onclick="toggleTag(this)">励志</button>
+                        <button type="button" class="tag-btn" data-tag="分享" onclick="toggleTag(this)">分享</button>
+                        <button type="button" class="tag-btn" data-tag="感悟" onclick="toggleTag(this)">感悟</button>
+                        <button type="button" class="tag-btn" data-tag="成就" onclick="toggleTag(this)">成就</button>
+                    </div>
+                </div>
+
+                <!-- 提交按钮 -->
+                <div class="form-actions">
+                    <button type="button" onclick="closeCreatePostModal()" class="cancel-btn">取消</button>
+                    <button type="submit" class="submit-btn">发布</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 新手引导 -->
+    <div id="tutorial-overlay" class="tutorial-overlay hidden">
+        <div class="tutorial-card">
+            <div class="tutorial-content">
+                <div class="tutorial-icon">🎯</div>
+                <h3 class="tutorial-title">欢迎来到《我还活着》</h3>
+                <p class="tutorial-text">让我们开始你的存活之旅吧！</p>
+                <div class="tutorial-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="tutorial-progress"></div>
+                    </div>
+                    <span class="progress-text" id="tutorial-step">1 / 5</span>
+                </div>
+                <div class="tutorial-buttons">
+                    <button class="tutorial-btn tutorial-skip" id="tutorial-skip">跳过</button>
+                    <button class="tutorial-btn tutorial-next" id="tutorial-next">下一步</button>
+                </div>
+            </div>
+        </div>
+        <div class="tutorial-highlight" id="tutorial-highlight"></div>
+    </div>
+
+    <script src="script.js"></script>
+    <script src="chat-functions.js"></script>
+    <script src="ranking-chat-integration.js"></script>
+    <script src="plaza-functions.js"></script>
+</body>
+
+</html>

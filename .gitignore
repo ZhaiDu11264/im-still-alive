@@ -1,0 +1,88 @@
+# 依赖
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 环境配置
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 日志文件
+logs
+*.log
+
+# 运行时数据
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# 覆盖率目录
+lib-cov
+coverage/
+.nyc_output
+
+# 依赖目录
+jspm_packages/
+
+# 可选的npm缓存目录
+.npm
+
+# 可选的eslint缓存
+.eslintcache
+
+# 输出目录
+dist/
+build/
+
+# SSL证书（生产环境应该使用正式证书）
+ssl/
+*.pem
+*.key
+*.crt
+
+# 上传文件
+public/uploads/*
+!public/uploads/.gitkeep
+
+# 数据库备份
+*.sql.backup
+*.db
+
+# 临时文件
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# IDE文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 系统文件
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 开发工具
+.cache/
+.parcel-cache/
+
+# 测试
+.coverage/
+test-results/
+
+# 部署
+.vercel
+.netlify

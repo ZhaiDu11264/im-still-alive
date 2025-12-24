@@ -1,0 +1,50 @@
+{
+  "name": "im-still-alive",
+  "version": "1.0.0",
+  "description": "一个简洁优雅的心情打卡应用",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "init-db": "node init-db.js",
+    "setup": "deploy.bat",
+    "reminder": "node scheduler.js",
+    "migrate-avatar": "node migrate-avatar.js",
+    "migrate-tutorial": "node migrate-tutorial.js",
+    "generate-cert": "node generate-ssl-cert.js",
+    "simple-cert": "node create-simple-cert.js",
+    "https": "node create-simple-cert.js && node server.js",
+    "deploy": "node prepare-opensource.js",
+    "verify": "verify-env.bat",
+    "release": "node create-release.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "country-state-city": "^3.2.1",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.2",
+    "mysql2": "^3.6.5",
+    "node-fetch": "^2.7.0",
+    "pem": "^1.14.8",
+    "selfsigned": "^5.2.0"
+  },
+  "keywords": [
+    "mood",
+    "checkin",
+    "chat",
+    "social",
+    "pwa"
+  ],
+  "author": "Your Name <your.email@example.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/im-still-alive.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/im-still-alive/issues"
+  },
+  "homepage": "https://github.com/your-username/im-still-alive#readme"
+}

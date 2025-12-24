@@ -1,0 +1,31 @@
+/* 排行榜操作按钮容器 */
+.ranking-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+/* 聊天按钮样式 */
+.chat-btn {
+    width: 35px;
+    height: 35px;
+    border: none;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.chat-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.chat-btn:active {
+    transform: scale(0.95);
+}
