@@ -58,7 +58,7 @@
 
 1. **克隆项目**
 ```bash
-git clone https://github.com/your-username/im-still-alive.git
+git clone https://github.com/ZhaiDu11264/im-still-alive.git
 cd im-still-alive
 ```
 
