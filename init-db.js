@@ -3,17 +3,28 @@ require('dotenv').config();
 const mysql = require('mysql2/promise');
 
 async function initDatabase() {
-    const config = {
+    const dbName = process.env.DB_NAME || 'im_alive_db';
+    const baseConfig = {
         host: process.env.DB_HOST || 'localhost',
         user: process.env.DB_USER || 'root',
         password: process.env.DB_PASSWORD || '',
-        database: process.env.DB_NAME || 'im_alive_db',
         charset: 'utf8mb4'
+    };
+    const config = {
+        ...baseConfig,
+        database: dbName
     };
 
     console.log('🚀 开始初始化数据库...');
 
     try {
+        const bootstrapConnection = await mysql.createConnection(baseConfig);
+        await bootstrapConnection.execute(
+            `CREATE DATABASE IF NOT EXISTS \`${dbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
+        );
+        await bootstrapConnection.end();
+        console.log(`✅ 数据库 ${dbName} 已准备`);
+
         const connection = await mysql.createConnection(config);
         console.log('✅ 连接到数据库');
 
@@ -30,10 +41,23 @@ async function initDatabase() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 notification_enabled BOOLEAN DEFAULT TRUE,
                 do_not_disturb BOOLEAN DEFAULT FALSE,
-                reminder_time TIME DEFAULT '09:00:00'
+                reminder_time TIME DEFAULT '09:00:00',
+                theme VARCHAR(20) DEFAULT 'light'
             )
         `);
         console.log('✅ 用户表创建完成');
+
+        // 兼容已有数据库：补上新增字段
+        const [themeColumns] = await connection.execute(
+            'SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?',
+            [dbName, 'users', 'theme']
+        );
+        if (themeColumns.length === 0) {
+            await connection.execute(
+                "ALTER TABLE users ADD COLUMN theme VARCHAR(20) DEFAULT 'light'"
+            );
+            console.log('✅ users.theme 字段已补充');
+        }
 
         // 创建打卡记录表
         await connection.execute(`
